@@ -125,6 +125,8 @@ class Point:
         self.curve = curve
 
     def __repr__(self):
+        if self.x is None and self.y is None:
+            return u"Point(infinity)"
         return u"Point(%i, %i, %r)" % (self.x, self.y, self.curve)
 
     def __eq__(self, other):
@@ -154,13 +156,16 @@ class Point:
             return other
         if self.curve != other.curve:
             raise NotImplementedError
-        if other.x == self.x and other.y == self.y:
-            # double
-            s = (3 * pow(self.x, 2, self.curve.p) +
-                 self.curve.a) / (2 * self.y)
-            x = (pow(s, 2, self.curve.p) - (2 * self.x)) % self.curve.p
-            y = (s * (self.x - x) - self.y) % self.curve.p
-            return Point(x, y, self.curve)
+        if other.x == self.x:
+            if other.y == self.y:
+                # double
+                s = (3 * pow(self.x, 2, self.curve.p) +
+                     self.curve.a) / (2 * self.y)
+                x = (pow(s, 2, self.curve.p) - (2 * self.x)) % self.curve.p
+                y = (s * (self.x - x) - self.y) % self.curve.p
+                return Point(x, y, self.curve)
+            else:
+                return INFINITY
         else:
             # add
             s = (self.y - other.y) / (self.x - other.x)

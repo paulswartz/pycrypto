@@ -244,6 +244,10 @@ class PointTestCase(unittest.TestCase):
                          _ECDSA.Point(137, 4, self.curve))
         self.assertTrue(point3.verify())
 
+    def test_add_negative(self):
+        self.assertEqual(self.point + _ECDSA.Point(0, 23, self.curve),
+                         _ECDSA.INFINITY)
+
     def test_double_point(self):
         point3 = self.point + self.point
         self.assertEqual(point3,
