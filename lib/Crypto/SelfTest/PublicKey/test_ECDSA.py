@@ -269,8 +269,6 @@ class PointTestCase(unittest.TestCase):
 
     def test_multiply(self):
         point3_multiply = self.point2 * 3
-        print 'P2 double', self.point2 + self.point2
-        print 'P2 + double', (self.point2 + self.point2) + self.point2
         point3_add = (self.point2 + self.point2) + self.point2
         point3_add_reverse = self.point2 + (self.point2 + self.point2)
         self.assertEqual(point3_add,
@@ -279,7 +277,6 @@ class PointTestCase(unittest.TestCase):
         self.assertEqual(point3_add, point3_add_reverse)
         self.assertTrue(point3_multiply.verify())
 
-        print self.point2
         point3_multiply = self.point2 * 4
         point3_add = self.point2 + self.point2
         point3_add = point3_add + point3_add  # 4x is two doubles

@@ -65,22 +65,23 @@ class Point:
     """
     Class representing a point on an elliptic curve.
     """
-    def __init__(self, x, y, curve):
+    # XXX use methods on T instead of on this when we support 2**m curves
+    def __init__(self, x, y, T):
         self.x = x
         self.y = y
-        self.curve = curve
+        self.T = T
 
     def __repr__(self):
         if self.x is None and self.y is None:
             return u"Point(infinity)"
-        return u"Point(%i, %i, %r)" % (self.x, self.y, self.curve)
+        return u"Point(%i, %i, %r)" % (self.x, self.y, self.T)
 
     def __eq__(self, other):
         if not isinstance(other, Point):
             return NotImplemented
         # XXX short-circuit; possible timing issue?
         return self.x == other.x and self.y == other.y and \
-            self.curve == other.curve
+            self.T == other.T
 
     def verify(self):
         """
@@ -88,11 +89,11 @@ class Point:
         """
         if self.x is None and self.y is None:
             return True
-        if self.x >= self.curve.p or self.y >= self.curve.p:
+        if self.x >= self.T.p or self.y >= self.T.p:
             return False
-        left = pow(self.y, 2, self.curve.p)
-        right = pow(self.x, 3, self.curve.p) + (
-            self.curve.a * self.x + self.curve.b) % self.curve.p
+        left = pow(self.y, 2, self.T.p)
+        right = (pow(self.x, 3, self.T.p) + (
+                 self.T.a * self.x + self.T.b)) % self.T.p
         return left == right
 
     def __add__(self, other):
@@ -102,38 +103,41 @@ class Point:
             return self
         if self.x is None and self.y is None:
             return other
-        if self.curve != other.curve:
+        if self.T != other.T:
             raise NotImplementedError
         if other.x == self.x:
             if other.y == self.y and self.y != 0:
                 # double
-                s = (3 * pow(self.x, 2, self.curve.p) +
-                     self.curve.a) / (2 * self.y)
-                x = (pow(s, 2, self.curve.p) - (2 * self.x)) % self.curve.p
-                y = (s * (self.x - x) - self.y) % self.curve.p
-                return Point(x, y, self.curve)
+                s_num = (3 * self.x ** 2 + self.T.a) % self.T.p
+                s_dem = (2 * self.y) % self.T.p
+                s = s_num * number.inverse(s_dem, self.T.p)
+                x = (s ** 2 - (2 * self.x)) % self.T.p
+                y = (s * (self.x - x) - self.y) % self.T.p
+                return Point(x, y, self.T)
             else:
                 return INFINITY
         else:
             # add
-            s = (self.y - other.y) / (self.x - other.x)
-            x = (pow(s, 2, self.curve.p) - self.x - other.x) % self.curve.p
-            y = (s * (self.x - x) - self.y) % self.curve.p
-            return Point(x, y, self.curve)
+            s_num = (self.y - other.y) % self.T.p
+            s_dem = (self.x - other.x) % self.T.p
+            s = s_num * number.inverse(s_dem, self.T.p)
+            x = (s ** 2 - self.x - other.x) % self.T.p
+            y = s * (self.x - x) - self.y
+            return Point(x, y % self.T.p, self.T)
 
     def __mul__(self, other):
-        if not isinstance(other, int):
+        if not isinstance(other, (int, long)):
             raise NotImplementedError
         if not other:
             return INFINITY
-        # implement scalar multiplication based on addition
+        # implement scalar multiplication based on addition using the
+        # add/double&add algorithm
         bit_length = int(math.ceil(math.log(other, 2)))
-        n = self
         r = INFINITY
-        for i in range(1, bit_length + 1):
+        for i in range(bit_length, -1, -1):
+            r = r + r
             if (other & 2 ** i) == 2 ** i:
-                r = r + n
-            n = n + n
+                r = r + self
         return r
 
 
@@ -195,7 +199,6 @@ class PrimeCurveDomain(CurveDomain):
 
         # verify P is prime
         if not number.isPrime(self.p):
-            print 'p'
             return False
 
         # verify attributes are in the range [0, p-1]
