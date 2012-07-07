@@ -223,9 +223,9 @@ class PointTestCase(unittest.TestCase):
         global _ECDSA
         from Crypto.PublicKey import _ECDSA
         # values from http://www.johannes-bauer.com/compsci/ecc/?menuid=4
-        self.curve = _ECDSA.PrimeCurveDomain(263, 2, 3, (200, 39), 263, 1)
-        self.point = _ECDSA.Point(0, 240, self.curve)
-        self.point2 = _ECDSA.Point(1, 100, self.curve)
+        self.curve = _ECDSA.PrimeCurveDomain(263, 2, 3, (111, 247), 263, 1)
+        self.point = _ECDSA.Point(19, 59, self.curve)
+        self.point2 = _ECDSA.Point(175, 83, self.curve)
 
     def test_verify(self):
         self.assertTrue(self.point.verify())
@@ -245,24 +245,49 @@ class PointTestCase(unittest.TestCase):
     def test_add_point(self):
         point3 = self.point + self.point2
         self.assertEqual(point3,
-                         _ECDSA.Point(137, 4, self.curve))
+                         _ECDSA.Point(13, 124, self.curve))
         self.assertTrue(point3.verify())
 
+        point3 = self.point2 + self.point
+        self.assertEqual(point3,
+                         _ECDSA.Point(13, 124, self.curve))
+
     def test_add_negative(self):
-        self.assertEqual(self.point + _ECDSA.Point(0, 23, self.curve),
+        self.assertEqual(self.point + _ECDSA.Point(19, 204, self.curve),
                          _ECDSA.INFINITY)
 
     def test_double_point(self):
         point3 = self.point + self.point
         self.assertEqual(point3,
-                         _ECDSA.Point(0, 23, self.curve))
+                         _ECDSA.Point(205, 45, self.curve))
+        self.assertTrue(point3.verify())
+
+        point3 = self.point2 + self.point2
+        self.assertTrue(point3,
+                        _ECDSA.Point(61, 20, self.curve))
         self.assertTrue(point3.verify())
 
     def test_multiply(self):
         point3_multiply = self.point2 * 3
-        point3_add = self.point2 + self.point2 + self.point2
+        print 'P2 double', self.point2 + self.point2
+        print 'P2 + double', (self.point2 + self.point2) + self.point2
+        point3_add = (self.point2 + self.point2) + self.point2
+        point3_add_reverse = self.point2 + (self.point2 + self.point2)
+        self.assertEqual(point3_add,
+                         _ECDSA.Point(61, 243, self.curve))
+        self.assertEqual(point3_multiply, point3_add)
+        self.assertEqual(point3_add, point3_add_reverse)
+        self.assertTrue(point3_multiply.verify())
+
+        print self.point2
+        point3_multiply = self.point2 * 4
+        point3_add = self.point2 + self.point2
+        point3_add = point3_add + point3_add  # 4x is two doubles
+        self.assertTrue(point3_add,
+                        _ECDSA.Point(175, 180, self.curve))
         self.assertEqual(point3_multiply, point3_add)
         self.assertTrue(point3_multiply.verify())
+
         self.assertTrue(self.point2 * 0, _ECDSA.INFINITY)
 
 
