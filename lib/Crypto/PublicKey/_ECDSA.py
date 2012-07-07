@@ -33,8 +33,10 @@ from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Hash import SHA
 from Crypto.Util.py3compat import *
 
+
 class error (Exception):
     pass
+
 
 def generateQ(randfunc):
     S=randfunc(20)
@@ -54,16 +56,15 @@ def generateQ(randfunc):
         return S, q
     raise RuntimeError('Bad q value generated')
 
-def generate_py(bits, randfunc, progress_func=None):
-    """generate(bits:int, randfunc:callable, progress_func:callable)
+def generate_py(domain, randfunc, progress_func=None):
+    """generate(domain:CurveDomain, randfunc:callable, progress_func:callable)
 
-    Generate a ECDSA key of length 'bits', using 'randfunc' to get
-    random data and 'progress_func', if present, to display
-    the progress of the key generation.
+    Generate a ECDSA key from domain 'domain', using 'randfunc' to get random
+    data and 'progress_func', if present, to display the progress of the key
+    generation.
     """
-
-    if bits<160:
-        raise ValueError('Key length < 160 bits')
+    if not domain.valid():
+        raise ValueError('Invalid domain')
     obj=ECDSAobj()
     # Generate string S and prime q
     if progress_func:
@@ -113,3 +114,122 @@ def generate_py(bits, randfunc, progress_func=None):
 class ECDSAobj:
     pass
 
+
+class Point:
+    """
+    Class representing a point on an elliptic curve.
+    """
+    def __init__(self, x, y, curve):
+        self.x = x
+        self.y = y
+        self.curve = curve
+
+    def __repr__(self):
+        return u"Point(%i, %i, %r)" % (self.x, self.y, self.curve)
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return NotImplemented
+        # XXX short-circuit; possible timing issue?
+        return self.x == other.x and self.y == other.y and \
+            self.curve == other.curve
+
+    def verify(self):
+        """
+        Verify that this point is on the curve.
+        """
+        if self.x is None and self.y is None:
+            return True
+        left = pow(self.y, 2, self.curve.p)
+        right = pow(self.x, 3, self.curve.p) + (
+            self.curve.a * self.x + self.curve.b) % self.curve.p
+        return left == right
+
+    def __add__(self, other):
+        if not isinstance(other, Point):
+            raise NotImplementedError
+        if other.x is None and other.y is None:
+            return self
+        if self.x is None and self.y is None:
+            return other
+        if self.curve != other.curve:
+            raise NotImplementedError
+        if other.x == self.x and other.y == self.y:
+            # double
+            s = (3 * pow(self.x, 2, self.curve.p) +
+                 self.curve.a) / (2 * self.y)
+            x = (pow(s, 2, self.curve.p) - (2 * self.x)) % self.curve.p
+            y = (s * (self.x - x) - self.y) % self.curve.p
+            return Point(x, y, self.curve)
+        else:
+            # add
+            s = (self.y - other.y) / (self.x - other.x)
+            x = (pow(s, 2, self.curve.p) - self.x - other.x) % self.curve.p
+            y = (s * (self.x - x) - self.y) % self.curve.p
+            return Point(x, y, self.curve)
+
+    def __mul__(self, other):
+        if not isinstance(other, int):
+            raise NotImplementedError
+        # implement scalar multiplication based on addition
+        bit_length = int(math.ceil(math.log(other, 2)))
+        n = self
+        r = INFINITY
+        for i in range(1, bit_length + 1):
+            if (other & 2 ** i) == 2 ** i:
+                r = r + n
+            n = n + n
+        return r
+
+
+INFINITY = Point(None, None, None)  # Infinity is on every curve
+
+
+class CurveDomain:
+    """
+    Represents the variables necessary to describe an elliptic curve.  It has
+    two classes, representing curves specified by Fp (PrimeCurveDomain) and
+    F2**m (TwoPowerCurveDomain) respectively.
+    """
+    def __init__(self, a, b, G, n, h):
+        self.a = a
+        self.b = b
+        self.G = G
+        self.n = n
+        self.h = h
+
+    def verify(self):
+        raise NotImplementedError
+
+
+class PrimeCurveDomain(CurveDomain):
+    """
+    An elliptic curve domain specified by a prime number p.
+    """
+    def __init__(self, p, a, b, G, n, h):
+        self.p = p
+        CurveDomain.__init__(self, a, b, G, n, h)
+
+    def __repr__(self):
+        return u"<PrimeDomain: %i>" % self.p
+
+    def verify(self):
+        raise NotImplementedError
+
+
+class TwoPowerCurveDomain(CurveDomain):
+    """
+    An elliptic curve domain specified by a power of two 2**m and an
+    irreducible binary polynomial f(x) of degree m specifying the polynomial
+    basis representation of F2**m.
+    """
+    def __init__(self, m, fx, a, b, G, n, h):
+        self.m = m
+        self.fx = fx
+        CurveDomain.__init__(self, a, b, G, n, h)
+
+    def __repr__(self):
+        return u"<TwoPowerDomain: 2**%i>" % self.m
+
+    def verify(self):
+        raise NotImplementedError
