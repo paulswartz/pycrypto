@@ -171,6 +171,8 @@ class Point:
     def __mul__(self, other):
         if not isinstance(other, int):
             raise NotImplementedError
+        if not other:
+            return INFINITY
         # implement scalar multiplication based on addition
         bit_length = int(math.ceil(math.log(other, 2)))
         n = self

@@ -255,6 +255,7 @@ class PointTestCase(unittest.TestCase):
         point3_add = self.point2 + self.point2 + self.point2
         self.assertEqual(point3_multiply, point3_add)
         self.assertTrue(point3_multiply.verify())
+        self.assertTrue(self.point2 * 0, _ECDSA.INFINITY)
 
 
 def get_tests(config={}):
