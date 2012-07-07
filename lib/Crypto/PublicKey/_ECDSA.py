@@ -142,6 +142,8 @@ class Point:
         """
         if self.x is None and self.y is None:
             return True
+        if self.x >= self.curve.p or self.y >= self.curve.p:
+            return False
         left = pow(self.y, 2, self.curve.p)
         right = pow(self.x, 3, self.curve.p) + (
             self.curve.a * self.x + self.curve.b) % self.curve.p
@@ -157,7 +159,7 @@ class Point:
         if self.curve != other.curve:
             raise NotImplementedError
         if other.x == self.x:
-            if other.y == self.y:
+            if other.y == self.y and self.y != 0:
                 # double
                 s = (3 * pow(self.x, 2, self.curve.p) +
                      self.curve.a) / (2 * self.y)

@@ -231,7 +231,11 @@ class PointTestCase(unittest.TestCase):
         self.assertTrue(self.point.verify())
         self.assertTrue(self.point2.verify())
         self.assertTrue(_ECDSA.INFINITY.verify())
+        # not on the curve
         self.assertFalse(_ECDSA.Point(0, 239, self.curve).verify())
+        # outside the range
+        self.assertFalse(_ECDSA.Point(0, 286, self.curve).verify())
+        self.assertFalse(_ECDSA.Point(264, 100, self.curve).verify())
 
     def test_add_infinity(self):
         self.assertEqual(self.point + _ECDSA.INFINITY, self.point)
