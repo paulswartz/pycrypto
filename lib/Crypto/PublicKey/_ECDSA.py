@@ -199,13 +199,24 @@ class CurveDomain:
     Represents the variables necessary to describe an elliptic curve.  It has
     two classes, representing curves specified by Fp (PrimeCurveDomain) and
     F2**m (TwoPowerCurveDomain) respectively.
+
+    * a and b are the curve domain parameters.
+
+    * G is the generator point for the curve.  It is passed in as a tuple (Gx,
+      Gy) and converted to a Point internally.
+
+    * n is a prime which is the order of G
+
+    * h is the cofactor which is #E(curve) / n
     """
     def __init__(self, a, b, G, n, h):
         self.a = a
         self.b = b
-        self.G = G
+        self.G = Point(G[0], G[1], self)
         self.n = n
         self.h = h
+        assert self.G.verify()
+        assert self.verify()
 
     def verify(self):
         raise NotImplementedError
@@ -222,8 +233,49 @@ class PrimeCurveDomain(CurveDomain):
     def __repr__(self):
         return u"<PrimeDomain: %i>" % self.p
 
-    def verify(self):
-        raise NotImplementedError
+    def verify(self, t=None):
+        # Specified in SEC1 3.1.1.2.1
+        if t is not None:
+            log2_ceil = math.ceil(math.log(self.p, 2))
+            if 80 < t < 256:
+                if log2_ceil != 2 * t:
+                    return False
+            elif t == 80:
+                if log2_ceil != 192:
+                    return False
+            elif t == 256:
+                if log2_ceil != 521:
+                    return False
+
+        # verify P is prime
+        if not isPrime(self.p):
+            print 'p'
+            return False
+
+        # verify attributes are in the range [0, p-1]
+        if self.a >= self.p:
+            return False
+        if self.b >= self.p:
+            return False
+        if self.G.x >= self.p:
+            return False
+        if self.G.y >= self.p:
+            return False
+
+        # check curve parameters
+        if (4 * pow(self.a, 3, self.p) +
+            27 * pow(
+                self.b, 2, self.p)) % self.p == 0:
+            return False
+        if pow(self.G.y, 2, self.p) != (pow(self.G.x, 3, self.p) +
+                                        self.a * self.G.x + self.b) % self.p:
+            return False
+
+        # verify N is prime
+        if not isPrime(self.n):
+            return False
+
+        return True
 
 
 class TwoPowerCurveDomain(CurveDomain):
@@ -242,3 +294,12 @@ class TwoPowerCurveDomain(CurveDomain):
 
     def verify(self):
         raise NotImplementedError
+
+# These curves are specified in SEC2.
+secp192k1 = PrimeCurveDomain(
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37,  # p
+    0, 3,  # a, b
+    (0xDB4FF10EC057E9AE26B07D0280B7F4341DA5D1B1EAE06C7D,  # Gx
+     0x9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D),  # Gy
+    0xFFFFFFFFFFFFFFFFFFFFFFFE26F2FC170F69466A74DEFD8D,  # n
+    1)  # h

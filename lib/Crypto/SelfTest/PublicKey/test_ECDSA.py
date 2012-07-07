@@ -223,7 +223,7 @@ class PointTestCase(unittest.TestCase):
         global _ECDSA
         from Crypto.PublicKey import _ECDSA
         # values from http://www.johannes-bauer.com/compsci/ecc/?menuid=4
-        self.curve = _ECDSA.PrimeCurveDomain(263, 2, 3, (200, 39), 270, 1)
+        self.curve = _ECDSA.PrimeCurveDomain(263, 2, 3, (200, 39), 263, 1)
         self.point = _ECDSA.Point(0, 240, self.curve)
         self.point2 = _ECDSA.Point(1, 100, self.curve)
 
