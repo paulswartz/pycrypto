@@ -24,23 +24,29 @@
 
 """ECDSA public-key signature algorithm.
 
-ECDSA_ is a widespread public-key signature algorithm. Its security is
-based on the XXX description of ECDSA XXX
+ECDSA_ is a widespread public-key signature algorithm. Its security is based on
+the ellipitic curve discrete logarithm problem (ECDLP_).  Given a curve, a
+generator point *G*, and another point *Q*, if it hard to find an integer *x*
+such that *G^x = Q*.
 
-In 2012, a sufficient size is deemed to be XXX size of ECDSA keys XXX
-For more information, see the most recent ECRYPT_ report.
+The strength of the key is based on the size of the curve; the private key *d*
+is in the range *[1, n-1]* where *n* is the order of the curve.  The signer
+holds *d* and publishes *Q = G^d* as the public key.
+
+In 2012, a sufficient size is 192 bits, but curves have been standardized up to
+521 bits.  Many curves have been published, by NIST_, SECG_, and ECC_.
 
 ECDSA is secure for new designs.
 
-The algorithm can only be used for authentication (digital signature).
-ECDSA cannot be used for confidentiality (encryption).
+The algorithm can only be used for authentication (digital signature) as well
+as for confidentiality (encryption).
 
-The values XXX ECDSA params XXX are called *domain parameters*; they are not
-sensitive but must be shared by both parties (the signer and the verifier).
-Different signers can share the same domain parameters with no security
-concerns.
+The curve *T* i not sensitive but must be shared by both parties (the signer
+and the verifier).  Different signers can share the same curve with
+no security concerns.
 
-XXX ECDSA result size XXX
+The ECDSA signature is twice as large as the order of the curve (64 bytes for a
+256-bit prime curve).
 
 This module provides facilities for generating new ECDSA keys and for
 constructing them from known components. ECDSA keys allows you to perform basic
@@ -51,9 +57,9 @@ signing and verification.
     >>> from Crypto.Hash import SHA256
     >>>
     >>> message = "Hello"
-    >>> key = ECDSA.generate(256)
+    >>> key = ECDSA.generate(ECDSA.secp192r1)
     >>> h = SHA256.new(message).digest()
-    >>> k = random.StrongRandom().randint(1,key.q-1)
+    >>> k = random.StrongRandom().randint(1,key.Q.T.n-1)
     >>> sig = key.sign(h,k)
     >>> ...
     >>> if key.verify(h,sig):
@@ -61,9 +67,10 @@ signing and verification.
     >>> else:
     >>>     print "Incorrect signature"
 
-.. _DSA: http://en.wikipedia.org/wiki/Digital_Signature_Algorithm
-.. _DLP: http://www.cosic.esat.kuleuven.be/publications/talk-78.pdf
-.. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
+.. _DSA: http://en.wikipedia.org/wiki/Elliptic_curve_cryptography
+.. _NIST: http://csrc.nist.gov/groups/ST/toolkit/documents/dss/NISTReCur.pdf
+.. _SECG: http://www.secg.org/download/aid-386/sec2_final.pdf
+.. _ECC: http://www.ecc-brainpool.org/download/Domain-parameters.pdf
 """
 
 __revision__ = "$Id$"
@@ -146,10 +153,10 @@ class _ECDSAobj(pubkey.pubkey):
         """Verify the validity of a ECDSA signature.
 
         :Parameter e: The hash of the expected message.
-        :Type m: byte string or long
+        :Type e: byte string or long
 
         :Parameter signature: The ECDSA signature to verify.
-        :Type signature: A tuple with 2 longs as return by `sign`
+        :Type signature: A tuple as return by `sign`
 
         :Return: True if the signature is correct, False otherwise.
         """
@@ -341,6 +348,16 @@ _impl = ECDSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
 error = _impl.error
+
+# This curve is only used for testing.
+secp160r1 = _ECDSA.PrimeCurveDomain(
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFF,
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFC,
+    0x1C97BEFC54BD7A8B65ACF89F81D4D4ADC565FA45,
+    (0x4A96B5688EF573284664698968C38BB913CBFC82,
+     0x23A628553168947D59DCC912042351377AC5FB32),
+    0x0100000000000000000001F4C8F927AED3CA752257,
+    1)
 
 # These curves are specified in SEC2.
 secp192k1 = _ECDSA.PrimeCurveDomain(
