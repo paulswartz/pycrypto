@@ -6,6 +6,7 @@ python:
   - 3.2
   - pypy
 before_install:
-  - python setup.py build
+  # ignore failed build on PyPy
+  - python setup.py build || test "$TRAVIS_PYTHON_VERSION" == "pypy"
 script:
   - python setup.py test
