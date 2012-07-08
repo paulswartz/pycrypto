@@ -101,6 +101,35 @@ def construct(Q, d=None):
     return obj
 
 
+def decode_point(bs, T):
+    """
+    Decode a string encoded version of a Point into a Point.
+    """
+    if not bs:
+        raise error("can't decode a blank Point")
+    if bs[0] == '\x00':
+        return INFINITY
+    elif bs[0] == '\x04':  # uncompressed point
+        if len(bs) % 2 == 0:  # should be two even strings, plus 1 byte
+            raise error('wrong length for uncompressed point')
+        length = (len(bs) - 1) / 2 + 1
+        x = number.bytes_to_long(bs[1:length])
+        y = number.bytes_to_long(bs[length:])
+    else:
+        x = number.bytes_to_long(bs[1:])
+        y_prime = (bs[0] == '\x03')
+        alpha = (x ** 3 + T.a * x + T.b) % T.p
+        beta = number.sqrt(alpha, T.p)
+        if beta % 2 == y_prime:
+            y = beta
+        else:
+            y = T.p - beta
+    p = Point(x, y, T)
+    if not p.verify():
+        raise error("decoded an invalid point")
+    return p
+
+
 class Point:
     """
     Class representing a point on an elliptic curve.
@@ -121,6 +150,20 @@ class Point:
         # XXX short-circuit; possible timing issue?
         return self.x == other.x and self.y == other.y and \
             self.T == other.T
+
+    def encode(self, compress=True):
+        if self.x is None:  # INFINITY:
+            return '\x00'
+        x_encoded = number.long_to_bytes(self.x)
+        if not compress:
+            y_encoded = number.long_to_bytes(self.y)
+            return ''.join(('\x04', x_encoded, y_encoded))
+        else:
+            odd = self.y % 2
+            if odd:
+                return '\x03' + x_encoded
+            else:
+                return '\x02' + x_encoded
 
     def verify(self):
         """

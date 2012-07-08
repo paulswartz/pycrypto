@@ -243,12 +243,6 @@ class ECDSAImplementation(object):
         """Create a new ECDSA key factory.
 
         :Keywords:
-         use_fast_math : bool
-                                Specify which mathematic library to use:
-
-                                - *None* (default). Use fastest math available.
-                                - *True* . Use fast math.
-                                - *False* . Use slow math.
          default_randfunc : callable
                                 Specify how to collect random data:
 
@@ -262,6 +256,7 @@ class ECDSAImplementation(object):
         #   not None       - use the specified function
         self._default_randfunc = kwargs.get('default_randfunc', None)
         self._current_randfunc = None
+        self._error = _ECDSA.error
 
     def _get_randfunc(self, randfunc):
         if randfunc is not None:
@@ -329,10 +324,7 @@ class ECDSAImplementation(object):
 _impl = ECDSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
-
-
-class error(Exception):
-    pass
+error = _impl._error
 
 
 # This curve is only used for testing.

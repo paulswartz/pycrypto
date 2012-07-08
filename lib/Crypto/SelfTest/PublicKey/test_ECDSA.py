@@ -27,25 +27,18 @@
 __revision__ = "$Id$"
 
 import sys
-import os
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 import unittest
-from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
+from Crypto.SelfTest.st_common import list_test_cases
 
-def _sws(s):
-    """Remove whitespace from a text or byte string"""
-    if isinstance(s,str):
-        return "".join(s.split())
-    else:
-        return b("").join(s.split())
 
 class ECDSATest(unittest.TestCase):
 
     def setUp(self):
-        global ECDSA, Random, bytes_to_long, size
+        global ECDSA, Random
         from Crypto.PublicKey import ECDSA
         from Crypto import Random
 
@@ -211,6 +204,55 @@ class PrimePointTestCase(unittest.TestCase):
         self.assertTrue(point3_multiply.verify())
 
         self.assertTrue(self.point2 * 0, _ECDSA.INFINITY)
+
+    def test_encode(self):
+        """
+        `encode()` should return a string version of the Point.  If *compress*
+        is True, the returned string is in compressed form.  If *compress* is
+        False, the returned string is uncompressed.
+        """
+        # Test data comes from GEC2:
+        #  http://www.secg.org/download/aid-390/gec2.pdf
+        from Crypto.PublicKey.ECDSA import secp160r1, secp192r1
+        x = ('\x4a\x96\xb5\x68\x8e\xf5\x73\x28\x46\x64\x69\x89\x68\xc3\x8b'
+             '\xb9\x13\xcb\xfc\x82')
+        y = ('\x23\xa6\x28\x55\x31\x68\x94\x7d\x59\xdc\xc9\x12\x04\x23\x51'
+             '\x37\x7a\xc5\xfb\x32')
+        self.assertEqual(
+            secp160r1.G.encode(compress=False),
+            '\x04' + x + y)
+        self.assertEqual(
+            secp160r1.G.encode(compress=True),
+            '\x02' + x)
+
+        x = ('\x18\x8D\xA8\x0E\xB0\x30\x90\xF6\x7C\xBF\x20\xEB\x43\xA1\x88\x00'
+             '\xF4\xFF\x0A\xFD\x82\xFF\x10\x12')
+        self.assertEqual(
+            secp192r1.G.encode(compress=True),
+            '\x03' + x)
+
+        self.assertEqual(_ECDSA.INFINITY.encode(), '\x00')
+
+    def test_decode(self):
+        """
+        `decode_point()` should return a Point from the given bytestring.
+        """
+        # Test data comes from GEC2:
+        #  http://www.secg.org/download/aid-390/gec2.pdf
+        from Crypto.PublicKey.ECDSA import secp160r1, secp192r1
+        x = ('\x4a\x96\xb5\x68\x8e\xf5\x73\x28\x46\x64\x69\x89\x68\xc3\x8b'
+             '\xb9\x13\xcb\xfc\x82')
+        y = ('\x23\xa6\x28\x55\x31\x68\x94\x7d\x59\xdc\xc9\x12\x04\x23\x51'
+             '\x37\x7a\xc5\xfb\x32')
+        self.assertEqual(_ECDSA.decode_point('\x04' + x + y, secp160r1),
+                         secp160r1.G)
+        self.assertEqual(_ECDSA.decode_point('\x02' + x, secp160r1),
+                         secp160r1.G)
+
+        x = ('\x18\x8D\xA8\x0E\xB0\x30\x90\xF6\x7C\xBF\x20\xEB\x43\xA1\x88\x00'
+             '\xF4\xFF\x0A\xFD\x82\xFF\x10\x12')
+        self.assertEqual(_ECDSA.decode_point('\x03' + x, secp192r1),
+                         secp192r1.G)
 
 
 def get_tests(config={}):
