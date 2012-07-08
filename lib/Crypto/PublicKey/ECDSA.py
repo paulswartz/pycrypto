@@ -256,7 +256,6 @@ class ECDSAImplementation(object):
         #   not None       - use the specified function
         self._default_randfunc = kwargs.get('default_randfunc', None)
         self._current_randfunc = None
-        self._error = _ECDSA.error
 
     def _get_randfunc(self, randfunc):
         if randfunc is not None:
@@ -324,8 +323,8 @@ class ECDSAImplementation(object):
 _impl = ECDSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
-error = _impl._error
-
+error = _ECDSA.error
+decode_point = _ECDSA.decode_point
 
 # This curve is only used for testing.
 secp160r1 = _ECDSA.PrimeCurveDomain(
