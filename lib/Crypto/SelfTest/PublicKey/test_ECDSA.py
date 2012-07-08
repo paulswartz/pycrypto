@@ -43,137 +43,96 @@ def _sws(s):
         return b("").join(s.split())
 
 class ECDSATest(unittest.TestCase):
-    # Test vector from "Appendix 5. Example of the ECDSA" of
-    # "Digital Signature Standard (DSS)",
-    # U.S. Department of Commerce/National Institute of Standards and Technology
-    # FIPS 186-2 (+Change Notice), 2000 January 27.
-    # http://csrc.nist.gov/publications/fips/fips186-2/fips186-2-change1.pdf
 
-    y = _sws("""19131871 d75b1612 a819f29d 78d1b0d7 346f7aa7 7bb62a85
-                9bfd6c56 75da9d21 2d3a36ef 1672ef66 0b8c7c25 5cc0ec74
-                858fba33 f44c0669 9630a76b 030ee333""")
-
-    g = _sws("""626d0278 39ea0a13 413163a5 5b4cb500 299d5522 956cefcb
-                3bff10f3 99ce2c2e 71cb9de5 fa24babf 58e5b795 21925c9c
-                c42e9f6f 464b088c c572af53 e6d78802""")
-
-    p = _sws("""8df2a494 492276aa 3d25759b b06869cb eac0d83a fb8d0cf7
-                cbb8324f 0d7882e5 d0762fc5 b7210eaf c2e9adac 32ab7aac
-                49693dfb f83724c2 ec0736ee 31c80291""")
-
-    q = _sws("""c773218c 737ec8ee 993b4f2d ed30f48e dace915f""")
-
-    x = _sws("""2070b322 3dba372f de1c0ffc 7b2e3b49 8b260614""")
-
-    k = _sws("""358dad57 1462710f 50e254cf 1a376b2b deaadfbf""")
-    k_inverse = _sws("""0d516729 8202e49b 4116ac10 4fc3f415 ae52f917""")
-    m = b2a_hex(b("abc"))
-    m_hash = _sws("""a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d""")
-    r = _sws("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0""")
-    s = _sws("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8""")
+    k = 0x12345
+    e = 0x6789A
+    r = 6186451819093483434750424257046574279557039309719577903637L
+    s = 2153819583584147175557025240043672389298338567502288622803L
 
     def setUp(self):
         global ECDSA, Random, bytes_to_long, size
         from Crypto.PublicKey import ECDSA
         from Crypto import Random
-        from Crypto.Util.number import bytes_to_long, inverse, size
 
-        self.dsa = ECDSA
+        self.T = ECDSA.secp192k1
+        self.ecdsa = ECDSA
 
     def test_generate_1arg(self):
         """ECDSA (default implementation) generated key (1 argument)"""
-        dsaObj = self.dsa.generate(1024)
-        self._check_private_key(dsaObj)
-        pub = dsaObj.publickey()
+        ecdsaObj = self.ecdsa.generate(self.T)
+        self._check_private_key(ecdsaObj)
+        pub = ecdsaObj.publickey()
         self._check_public_key(pub)
 
     def test_generate_2arg(self):
-        """ECDSA (default implementation) generated key (2 arguments)"""
-        dsaObj = self.dsa.generate(1024, Random.new().read)
-        self._check_private_key(dsaObj)
-        pub = dsaObj.publickey()
+        """ECECDSA (default implementation) generated key (2 arguments)"""
+        ecdsaObj = self.ecdsa.generate(self.T, Random.new().read)
+        self._check_private_key(ecdsaObj)
+        pub = ecdsaObj.publickey()
         self._check_public_key(pub)
 
-    def test_construct_4tuple(self):
-        """ECDSA (default implementation) constructed key (4-tuple)"""
-        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
-        dsaObj = self.dsa.construct((y, g, p, q))
-        self._test_verification(dsaObj)
+    def test_construct_1tuple(self):
+        """ECECDSA (default implementation) constructed key (1-tuple)"""
+        Q = self.T.G
+        ecdsaObj = self.ecdsa.construct((Q,))
+        self._test_verification(ecdsaObj)
 
-    def test_construct_5tuple(self):
-        """ECDSA (default implementation) constructed key (5-tuple)"""
-        (y, g, p, q, x) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)]
-        dsaObj = self.dsa.construct((y, g, p, q, x))
-        self._test_signing(dsaObj)
-        self._test_verification(dsaObj)
+    def test_construct_2tuple(self):
+        """ECECDSA (default implementation) constructed key (2-tuple)"""
+        Q = self.T.G
+        d = 1
+        ecdsaObj = self.ecdsa.construct((Q, d))
+        self._test_signing(ecdsaObj)
+        self._test_verification(ecdsaObj)
 
-    def _check_private_key(self, dsaObj):
+    def _check_private_key(self, ecdsaObj):
         # Check capabilities
-        self.assertEqual(1, dsaObj.has_private())
-        self.assertEqual(1, dsaObj.can_sign())
-        self.assertEqual(0, dsaObj.can_encrypt())
-        self.assertEqual(0, dsaObj.can_blind())
+        self.assertEqual(1, ecdsaObj.has_private())
+        self.assertEqual(1, ecdsaObj.can_sign())
+        self.assertEqual(0, ecdsaObj.can_encrypt())
+        self.assertEqual(0, ecdsaObj.can_blind())
 
-        # Check dsaObj.[ygpqx] -> dsaObj.key.[ygpqx] mapping
-        self.assertEqual(dsaObj.y, dsaObj.key.y)
-        self.assertEqual(dsaObj.g, dsaObj.key.g)
-        self.assertEqual(dsaObj.p, dsaObj.key.p)
-        self.assertEqual(dsaObj.q, dsaObj.key.q)
-        self.assertEqual(dsaObj.x, dsaObj.key.x)
+        # Check ecdsaObj.[dQT] -> ecdsaObj.key.[dQT] mapping
+        self.assertEqual(ecdsaObj.d, ecdsaObj.key.d)
+        self.assertEqual(ecdsaObj.Q, ecdsaObj.key.Q)
 
         # Sanity check key data
-        self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
-        self.assertEqual(160, size(dsaObj.q))               # size(q) == 160 bits
-        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)      # q is a divisor of p-1
-        self.assertEqual(dsaObj.y, pow(dsaObj.g, dsaObj.x, dsaObj.p))     # y == g**x mod p
-        self.assertEqual(1, 0 < dsaObj.x < dsaObj.q)       # 0 < x < q
+        self.assertTrue(0 < ecdsaObj.d < ecdsaObj.Q.T.n)  # 0 < d < T.n
+        self.assertTrue(ecdsaObj.Q.verify())
+        self.assertTrue(ecdsaObj.Q.T.verify())
 
-    def _check_public_key(self, dsaObj):
-        k = a2b_hex(self.k)
-        m_hash = a2b_hex(self.m_hash)
-
+    def _check_public_key(self, ecdsaObj):
         # Check capabilities
-        self.assertEqual(0, dsaObj.has_private())
-        self.assertEqual(1, dsaObj.can_sign())
-        self.assertEqual(0, dsaObj.can_encrypt())
-        self.assertEqual(0, dsaObj.can_blind())
+        self.assertEqual(0, ecdsaObj.has_private())
+        self.assertEqual(1, ecdsaObj.can_sign())
+        self.assertEqual(0, ecdsaObj.can_encrypt())
+        self.assertEqual(0, ecdsaObj.can_blind())
 
-        # Check dsaObj.[ygpq] -> dsaObj.key.[ygpq] mapping
-        self.assertEqual(dsaObj.y, dsaObj.key.y)
-        self.assertEqual(dsaObj.g, dsaObj.key.g)
-        self.assertEqual(dsaObj.p, dsaObj.key.p)
-        self.assertEqual(dsaObj.q, dsaObj.key.q)
+        # Check ecdsaObj.[QT] -> ecdsaObj.key.[QT] mapping
+        self.assertEqual(ecdsaObj.Q, ecdsaObj.key.Q)
 
         # Check that private parameters are all missing
-        self.assertEqual(0, hasattr(dsaObj, 'x'))
-        self.assertEqual(0, hasattr(dsaObj.key, 'x'))
+        self.assertFalse(hasattr(ecdsaObj, 'd'))
+        self.assertFalse(hasattr(ecdsaObj.key, 'd'))
 
         # Sanity check key data
-        self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
-        self.assertEqual(160, size(dsaObj.q))               # size(q) == 160 bits
-        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)      # q is a divisor of p-1
+        self.assertTrue(ecdsaObj.Q.verify())
 
         # Public-only key objects should raise an error when .sign() is called
-        self.assertRaises(TypeError, dsaObj.sign, m_hash, k)
+        self.assertRaises(TypeError, ecdsaObj.sign, 0x12345, 0x12345)
 
         # Check __eq__ and __ne__
-        self.assertEqual(dsaObj.publickey() == dsaObj.publickey(),True) # assert_
-        self.assertEqual(dsaObj.publickey() != dsaObj.publickey(),False) # failIf
+        self.assertEqual(ecdsaObj.publickey() == ecdsaObj.publickey(), True) # assert_
+        self.assertEqual(ecdsaObj.publickey() != ecdsaObj.publickey(), False) # failIf
 
-    def _test_signing(self, dsaObj):
-        k = a2b_hex(self.k)
-        m_hash = a2b_hex(self.m_hash)
-        r = bytes_to_long(a2b_hex(self.r))
-        s = bytes_to_long(a2b_hex(self.s))
-        (r_out, s_out) = dsaObj.sign(m_hash, k)
-        self.assertEqual((r, s), (r_out, s_out))
+    def _test_signing(self, ecdsaObj):
+        (r_out, s_out) = ecdsaObj.sign(self.e, self.k)
+        self.assertEqual((self.r, self.s), (r_out, s_out))
 
-    def _test_verification(self, dsaObj):
-        m_hash = a2b_hex(self.m_hash)
-        r = bytes_to_long(a2b_hex(self.r))
-        s = bytes_to_long(a2b_hex(self.s))
-        self.assertEqual(1, dsaObj.verify(m_hash, (r, s)))
-        self.assertEqual(0, dsaObj.verify(m_hash + b("\0"), (r, s)))
+    def _test_verification(self, ecdsaObj):
+        self.assertEqual(1, ecdsaObj.verify(self.e, (self.r, self.s)))
+        self.assertEqual(0, ecdsaObj.verify(self.e + 1, (self.r, self.s)))
+
 
 class ECDSAFastMathTest(ECDSATest):
     def setUp(self):
@@ -188,18 +147,19 @@ class ECDSAFastMathTest(ECDSATest):
         """ECDSA (_fastmath implementation) generated key (2 arguments)"""
         ECDSATest.test_generate_2arg(self)
 
-    def test_construct_4tuple(self):
-        """ECDSA (_fastmath implementation) constructed key (4-tuple)"""
-        ECDSATest.test_construct_4tuple(self)
+    def test_construct_1tuple(self):
+        """ECDSA (_fastmath implementation) constructed key (1-tuple)"""
+        ECDSATest.test_construct_1tuple(self)
 
-    def test_construct_5tuple(self):
-        """ECDSA (_fastmath implementation) constructed key (5-tuple)"""
-        ECDSATest.test_construct_5tuple(self)
+    def test_construct_2tuple(self):
+        """ECDSA (_fastmath implementation) constructed key (2-tuple)"""
+        ECDSATest.test_construct_2tuple(self)
+
 
 class ECDSASlowMathTest(ECDSATest):
     def setUp(self):
         ECDSATest.setUp(self)
-        self.dsa = ECDSA.ECDSAImplementation(use_fast_math=False)
+        self.ecdsa = ECDSA.ECDSAImplementation(use_fast_math=False)
 
     def test_generate_1arg(self):
         """ECDSA (_slowmath implementation) generated key (1 argument)"""
@@ -209,13 +169,13 @@ class ECDSASlowMathTest(ECDSATest):
         """ECDSA (_slowmath implementation) generated key (2 arguments)"""
         ECDSATest.test_generate_2arg(self)
 
-    def test_construct_4tuple(self):
-        """ECDSA (_slowmath implementation) constructed key (4-tuple)"""
-        ECDSATest.test_construct_4tuple(self)
+    def test_construct_1tuple(self):
+        """ECDSA (_slowmath implementation) constructed key (2-tuple)"""
+        ECDSATest.test_construct_1tuple(self)
 
-    def test_construct_5tuple(self):
-        """ECDSA (_slowmath implementation) constructed key (5-tuple)"""
-        ECDSATest.test_construct_5tuple(self)
+    def test_construct_2tuple(self):
+        """ECDSA (_slowmath implementation) constructed key (2-tuple)"""
+        ECDSATest.test_construct_2tuple(self)
 
 
 class PointTestCase(unittest.TestCase):
@@ -304,7 +264,7 @@ def get_tests(config={}):
             raise ImportError("While the _fastmath module exists, importing "+
                 "it failed. This may point to the gmp or mpir shared library "+
                 "not being in the path. _fastmath was found at "+_fm_path)
-    #tests += list_test_cases(ECDSASlowMathTest)
+    tests += list_test_cases(ECDSASlowMathTest)
     return tests
 
 if __name__ == '__main__':

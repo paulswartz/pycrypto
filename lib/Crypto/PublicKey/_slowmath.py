@@ -33,9 +33,12 @@ import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.number import size, inverse, GCD
+from Crypto.PublicKey._ECDSA import CurveDomain, Point
+
 
 class error(Exception):
     pass
+
 
 class _RSAKey(object):
     def _blind(self, m, r):
@@ -183,5 +186,47 @@ def dsa_construct(y, g, p, q, x=None):
     return obj
 
 
-# vim:set ts=4 sw=4 sts=4 expandtab:
+class _ECDSAKey(object):
+    def size(self):
+        """Return the maximum number of bits that can be encrypted"""
+        return size(self.Q.T.p) - 1
 
+    def has_private(self):
+        return hasattr(self, 'd')
+
+    def _sign(self, e, k):   # alias for _decrypt
+        R = self.Q.T.G * k
+        if R.x == 0:
+            raise ValueError('invalid k value')
+        s_num = (e + self.d * R.x) % self.Q.T.n
+        s = (s_num * inverse(k, self.Q.T.n)) % self.Q.T.n
+        if s == 0:
+            raise ValueError('invalid k value')
+        return (R.x, s)
+
+    def _verify(self, e, r, s):
+        if r < 0 or r > self.Q.T.n:
+            return 0
+        if s < 0 or s > self.Q.T.n:
+            return 0
+        w = inverse(s, self.Q.T.n)
+        u1 = (e * w) % self.Q.T.n
+        u2 = (r * w) % self.Q.T.n
+        P1 = self.Q.T.G * u1
+        P2 = self.Q * u2
+        P = P1 + P2
+        return P.x == r
+
+
+def ecdsa_construct(Q, d=None):
+    assert isinstance(Q, Point)
+    assert Q.verify()
+    obj = _ECDSAKey()
+    obj.Q = Q
+
+    if d:
+        obj.d = d
+    return obj
+
+
+# vim:set ts=4 sw=4 sts=4 expandtab:

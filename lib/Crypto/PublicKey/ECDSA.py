@@ -68,7 +68,8 @@ signing and verification.
 
 __revision__ = "$Id$"
 
-__all__ = ['generate', 'construct', 'error', 'DSAImplementation', '_DSAobj']
+__all__ = ['generate', 'construct', 'error', 'ECDSAImplementation',
+           '_ECDSAobj']
 
 import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
@@ -82,6 +83,7 @@ try:
 except ImportError:
     _fastmath = None
 
+
 class _ECDSAobj(pubkey.pubkey):
     """Class defining an actual ECDSA key.
 
@@ -91,15 +93,13 @@ class _ECDSAobj(pubkey.pubkey):
     #:
     #: A public key will only have the following entries:
     #:
-    #:  - **y**, the public key.
-    #:  - **g**, the generator.
-    #:  - **p**, the modulus.
-    #:  - **q**, the order of the sub-group.
+    #:  - **Q**, the public key
+    #:  - **T**, the curve the key was generated with
     #:
     #: A private key will also have:
     #:
-    #:  - **x**, the private key.
-    keydata = ['y', 'g', 'p', 'q', 'x']
+    #:  - **d**, the private key.
+    keydata = ['Q', 'T', 'd']
 
     def __init__(self, implementation, key):
         self.implementation = implementation
@@ -111,51 +111,49 @@ class _ECDSAobj(pubkey.pubkey):
             # ECDSA key parameters directly from this object.
             return getattr(self.key, attrname)
         else:
-            raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
+            raise AttributeError("%s object has no %r attribute" % (
+                self.__class__.__name__, attrname,))
 
-    def sign(self, M, K):
+    def sign(self, e, k):
         """Sign a piece of data with ECDSA.
 
-        :Parameter M: The piece of data to sign with ECDSA. It may
-         not be longer in bit size than the sub-group order (*q*).
-        :Type M: byte string or long
+        :Parameter e: The hash of the piece of data to sign with ECDSA. It may
+         not be longer in bit size than the curve order **n**.
+         :Type e: byte string or long
 
-        :Parameter K: A secret number, chosen randomly in the closed
-         range *[1,q-1]*.
-        :Type K: long (recommended) or byte string (not recommended)
+        :Parameter k: A secret number, chosen randomly in the closed
+         range *[1,n-1]*.
+        :Type k: long (recommended) or byte string (not recommended)
 
-        :attention: selection of *K* is crucial for security. Generating a
-         random number larger than *q* and taking the modulus by *q* is
-         **not** secure, since smaller values will occur more frequently.
-         Generating a random number systematically smaller than *q-1*
-         (e.g. *floor((q-1)/8)* random bytes) is also **not** secure. In general,
-         it shall not be possible for an attacker to know the value of `any
-         bit of K`__.
+        :attention: selection of *k* is crucial for security. Generating a
+         random number larger than *n* and taking the modulus by *n* is **not**
+         secure, since smaller values will occur more frequently.  Generating a
+         random number systematically smaller than *n-1* (e.g. *floor((n-1)/8)*
+         random bytes) is also **not** secure. In general, it shall not be
+         possible for an attacker to know the value of any bit of k.
 
-        :attention: The number *K* shall not be reused for any other
+        :attention: The number *k* shall not be reused for any other
          operation and shall be discarded immediately.
 
-        :attention: M must be a digest cryptographic hash, otherwise
+        :attention: e must be a digest cryptographic hash, otherwise
          an attacker may mount an existential forgery attack.
 
         :Return: A tuple with 2 longs.
-
-        .. __: http://www.di.ens.fr/~pnguyen/pub_NgSh00.htm
         """
-        return pubkey.pubkey.sign(self, M, K)
+        return pubkey.pubkey.sign(self, e, k)
 
-    def verify(self, M, signature):
+    def verify(self, e, signature):
         """Verify the validity of a ECDSA signature.
 
-        :Parameter M: The expected message.
-        :Type M: byte string or long
+        :Parameter e: The hash of the expected message.
+        :Type m: byte string or long
 
         :Parameter signature: The ECDSA signature to verify.
         :Type signature: A tuple with 2 longs as return by `sign`
 
         :Return: True if the signature is correct, False otherwise.
         """
-        return pubkey.pubkey.verify(self, M, signature)
+        return pubkey.pubkey.verify(self, e, signature)
 
     def _encrypt(self, c, K):
         raise TypeError("ECDSA cannot encrypt")
@@ -192,7 +190,7 @@ class _ECDSAobj(pubkey.pubkey):
         return True
 
     def publickey(self):
-        return self.implementation.construct((self.key.y, self.key.g, self.key.p, self.key.q))
+        return self.implementation.construct((self.key.Q,))
 
     def __getstate__(self):
         d = {}
@@ -224,6 +222,7 @@ class _ECDSAobj(pubkey.pubkey):
             attrs.append("private")
         # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
+
 
 class ECDSAImplementation(object):
     """
@@ -282,15 +281,12 @@ class ECDSAImplementation(object):
             self._current_randfunc = Random.new().read
         return self._current_randfunc
 
-    def generate(self, bits, randfunc=None, progress_func=None):
+    def generate(self, T, randfunc=None, progress_func=None):
         """Randomly generate a fresh, new ECDSA key.
 
         :Parameters:
-         bits : int
-                            Key length, or size (in bits) of the ECDSA modulus
-                            *p*.
-                            It must be a multiple of 64, in the closed
-                            interval [512,1024].
+         T : Curve to use
+
          randfunc : callable
                             Random number generation function; it should accept
                             a single integer N and return a string of random data
@@ -310,59 +306,51 @@ class ECDSAImplementation(object):
         :Return: A ECDSA key object (`_ECDSAobj`).
 
         :Raise ValueError:
-            When **bits** is too little, too big, or not a multiple of 64.
+            When **T** is not a valid curve.
         """
- 
-        # Check against FIPS 186-2, which says that the size of the prime p
-        # must be a multiple of 64 bits between 512 and 1024
-        for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
-            if bits == 512 + 64*i:
-                return self._generate(bits, randfunc, progress_func)
+        if T.verify():
+            return self._generate(T, randfunc, progress_func)
 
-        # The March 2006 draft of FIPS 186-3 also allows 2048 and 3072-bit
-        # primes, but only with longer q values.  Since the current ECDSA
-        # implementation only supports a 160-bit q, we don't support larger
-        # values.
-        raise ValueError("Number of bits in p must be a multiple of 64 between 512 and 1024, not %d bits" % (bits,))
+        raise ValueError("Given curve %r is not valid" % T)
 
-    def _generate(self, bits, randfunc=None, progress_func=None):
+    def _generate(self, T, randfunc=None, progress_func=None):
         rf = self._get_randfunc(randfunc)
-        obj = _ECDSA.generate_py(bits, rf, progress_func)    # TODO: Don't use legacy _ECDSA module
-        key = self._math.dsa_construct(obj.y, obj.g, obj.p, obj.q, obj.x)
+        obj = _ECDSA.generate_py(T, rf, progress_func)
+        key = self._math.ecdsa_construct(obj.Q, obj.d)
         return _ECDSAobj(self, key)
 
     def construct(self, tup):
         """Construct a ECDSA key from a tuple of valid ECDSA components.
 
-        The modulus *p* must be a prime.
-
-        The following equations must apply:
-
-        - p-1 = 0 mod q
-        - g^x = y mod p
-        - 0 < x < q
-        - 1 < g < p
+        The curve T must be valid.
 
         :Parameters:
          tup : tuple
-                    A tuple of long integers, with 4 or 5 items
+                    A tuple of long integers, with 1 or 2 items
                     in the following order:
 
-                    1. Public key (*y*).
-                    2. Sub-group generator (*g*).
-                    3. Modulus, finite field order (*p*).
-                    4. Sub-group order (*q*).
-                    5. Private key (*x*). Optional.
+                    1. Public key (*Q*).
+                    2. Private key (*d*). Optional.
 
         :Return: A ECDSA key object (`_ECDSAobj`).
         """
-        key = self._math.dsa_construct(*tup)
+        key = self._math.ecdsa_construct(*tup)
         return _ECDSAobj(self, key)
 
 _impl = ECDSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
 error = _impl.error
+
+# These curves are specified in SEC2.
+secp192k1 = _ECDSA.PrimeCurveDomain(
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37,  # p
+    0, 3,  # a, b
+    (0xDB4FF10EC057E9AE26B07D0280B7F4341DA5D1B1EAE06C7D,  # Gx
+     0x9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D),  # Gy
+    0xFFFFFFFFFFFFFFFFFFFFFFFE26F2FC170F69466A74DEFD8D,  # n
+    1)  # h
+
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
 

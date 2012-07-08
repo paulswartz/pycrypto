@@ -36,24 +36,29 @@ class error (Exception):
     pass
 
 
-def generate_py(curve, randfunc, progress_func=None):
+def generate_py(T, randfunc, progress_func=None):
     """generate(curve:CurveDomain, randfunc:callable, progress_func:callable)
 
-    Generate a ECDSA key on curve 'curve', using 'randfunc' to get random
+    Generate a ECDSA key on curve 'T', using 'randfunc' to get random
     data and 'progress_func', if present, to display the progress of the key
     generation.
     """
-    if not curve.verify():
+    if not T.verify():
         raise ValueError('Invalid curve')
     obj = ECDSAobj()
-    obj.curve = curve
+    obj.T = T
     # Generate private key d and public key Q = dg
     if progress_func:
         progress_func('d\n')
-    obj.d = number.getRandomRange(1, curve.n - 1, randfunc)
+    obj.d = number.getRandomRange(1, T.n - 1, randfunc)
     if progress_func:
         progress_func('Q\n')
-    obj.Q = curve.G * obj.d
+    obj.Q = T.G * obj.d
+    assert T.G.verify()
+    assert obj.Q.verify()
+    #print hex(obj.d)
+    #print hex(obj.Q.x)
+    #print hex(obj.Q.y)
     return obj
 
 
@@ -243,12 +248,3 @@ class TwoPowerCurveDomain(CurveDomain):
 
     def verify(self):
         raise NotImplementedError
-
-# These curves are specified in SEC2.
-secp192k1 = PrimeCurveDomain(
-    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37,  # p
-    0, 3,  # a, b
-    (0xDB4FF10EC057E9AE26B07D0280B7F4341DA5D1B1EAE06C7D,  # Gx
-     0x9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D),  # Gy
-    0xFFFFFFFFFFFFFFFFFFFFFFFE26F2FC170F69466A74DEFD8D,  # n
-    1)  # h
