@@ -163,6 +163,48 @@ def inverse(u, v):
         u1 = u1 + v
     return u1
 
+
+def sqrt(a, p):
+    """sqrt(a: long, p:long):long
+    Returns the square root of a mod p, or -1 if no root exists.
+    """
+    # check that u is a quadratic residue o v
+    p_minus1 = p - 1
+    if pow(a, p_minus1 / 2, p) != 1:
+        return -1
+    if p % 4 == 3:
+        # simple case
+        k = (p - 3) / 4
+        return  pow(a, k + 1, p)
+    s = 2
+    while 1:
+        s_pow2 = 2 ** s
+        m, rem = divmod(p_minus1, s_pow2)
+        if rem == 0 and m % 2:
+            break
+        if s_pow2 > p_minus1:
+            return -1
+        s += 1
+    z = 2
+    while 1:
+        if pow(z, p_minus1 / 2, p) == p_minus1:
+            break
+        if z > p:
+            return -1
+        z += 1
+    if z == p - 1:
+        return -1
+    c = pow(z, m, p)
+    u = pow(a, m, p)
+    v = pow(a, (m + 1) / 2, p)
+    for i in range(s - 2, -1, -1):
+        if pow(u, 2 ** i, p) == p_minus1:
+            u = (u * c ** 2) % p
+            v = (v * c) % p
+        c = pow(c, 2, p)
+    return v
+
+
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
 

@@ -231,6 +231,9 @@ class MiscTests(unittest.TestCase):
                     self.assertEqual((a, b, int(math.floor(float(a) / b))),
                                      (a, b, number.floor_div(a, b)))
 
+    def test_sqrt(self):
+        self.assertEqual(number.sqrt(83, 673), 140)
+
     def test_getStrongPrime(self):
         """Util.number.getStrongPrime"""
         self.assertRaises(ValueError, number.getStrongPrime, 256)
