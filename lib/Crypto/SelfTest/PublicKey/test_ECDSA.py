@@ -44,23 +44,11 @@ def _sws(s):
 
 class ECDSATest(unittest.TestCase):
 
-    # Test vectors come from GEC2:
-    # http://www.secg.org/download/aid-390/gec2.pdf
-    d = 971761939728640320549601132085879836204587084162
-    Q = (466448783855397898016055842232266600516272889280,
-         1110706324081757720403272427311003102474457754220)
-    k = 702232148019446860144825009548118511996283736794
-    e = 968236873715988614170569073515315707566766479517
-    r = 1176954224688105769566774212902092897866168635793
-    s = 299742580584132926933316745664091704165278518100
-
     def setUp(self):
         global ECDSA, Random, bytes_to_long, size
         from Crypto.PublicKey import ECDSA
         from Crypto import Random
 
-        self.T = ECDSA.secp160r1
-        self.Q = _ECDSA.Point(self.Q[0], self.Q[1], self.T)
         self.ecdsa = ECDSA
 
     def test_generate_1arg(self):
@@ -137,10 +125,28 @@ class ECDSATest(unittest.TestCase):
         self.assertEqual(0, ecdsaObj.verify(self.e + 1, (self.r, self.s)))
 
 
-class ECDSAFastMathTest(ECDSATest):
+class PrimeECDSATest(ECDSATest):
+
+    # Test vectors come from GEC2:
+    # http://www.secg.org/download/aid-390/gec2.pdf
+    d = 971761939728640320549601132085879836204587084162
+    Q = (466448783855397898016055842232266600516272889280,
+         1110706324081757720403272427311003102474457754220)
+    k = 702232148019446860144825009548118511996283736794
+    e = 968236873715988614170569073515315707566766479517
+    r = 1176954224688105769566774212902092897866168635793
+    s = 299742580584132926933316745664091704165278518100
+
     def setUp(self):
         ECDSATest.setUp(self)
-        self.dsa = ECDSA.ECDSAImplementation(use_fast_math=True)
+        self.T = ECDSA.secp160r1
+        self.Q = _ECDSA.Point(self.Q[0], self.Q[1], self.T)
+
+
+class PrimeECDSAFastMathTest(PrimeECDSATest):
+    def setUp(self):
+        PrimeECDSATest.setUp(self)
+        self.ecdsa = ECDSA.ECDSAImplementation(use_fast_math=True)
 
     def test_generate_1arg(self):
         """ECDSA (_fastmath implementation) generated key (1 argument)"""
@@ -159,9 +165,9 @@ class ECDSAFastMathTest(ECDSATest):
         ECDSATest.test_construct_2tuple(self)
 
 
-class ECDSASlowMathTest(ECDSATest):
+class PrimeECDSASlowMathTest(PrimeECDSATest):
     def setUp(self):
-        ECDSATest.setUp(self)
+        PrimeECDSATest.setUp(self)
         self.ecdsa = ECDSA.ECDSAImplementation(use_fast_math=False)
 
     def test_generate_1arg(self):
@@ -181,7 +187,7 @@ class ECDSASlowMathTest(ECDSATest):
         ECDSATest.test_construct_2tuple(self)
 
 
-class PointTestCase(unittest.TestCase):
+class PrimePointTestCase(unittest.TestCase):
     def setUp(self):
         global _ECDSA
         from Crypto.PublicKey import _ECDSA
@@ -253,7 +259,7 @@ class PointTestCase(unittest.TestCase):
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(PointTestCase)
+    tests += list_test_cases(PrimePointTestCase)
     # try:
     #     from Crypto.PublicKey import _fastmath
     #     tests += list_test_cases(ECDSAFastMathTest)
@@ -267,7 +273,7 @@ def get_tests(config={}):
     #         raise ImportError("While the _fastmath module exists, importing "+
     #             "it failed. This may point to the gmp or mpir shared library "+
     #             "not being in the path. _fastmath was found at "+_fm_path)
-    tests += list_test_cases(ECDSASlowMathTest)
+    tests += list_test_cases(PrimeECDSASlowMathTest)
     return tests
 
 if __name__ == '__main__':
