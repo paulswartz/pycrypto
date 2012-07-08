@@ -170,11 +170,11 @@ def sqrt(a, p):
     """
     # check that u is a quadratic residue o v
     p_minus1 = p - 1
-    if pow(a, p_minus1 / 2, p) != 1:
+    if pow(a, p_minus1 // 2, p) != 1:
         return -1
     if p % 4 == 3:
         # simple case
-        k = (p - 3) / 4
+        k = (p - 3) // 4
         return  pow(a, k + 1, p)
     s = 2
     while 1:
@@ -187,7 +187,7 @@ def sqrt(a, p):
         s += 1
     z = 2
     while 1:
-        if pow(z, p_minus1 / 2, p) == p_minus1:
+        if pow(z, p_minus1 // 2, p) == p_minus1:
             break
         if z > p:
             return -1
@@ -196,7 +196,7 @@ def sqrt(a, p):
         return -1
     c = pow(z, m, p)
     u = pow(a, m, p)
-    v = pow(a, (m + 1) / 2, p)
+    v = pow(a, (m + 1) // 2, p)
     for i in range(s - 2, -1, -1):
         if pow(u, 2 ** i, p) == p_minus1:
             u = (u * c ** 2) % p

@@ -30,6 +30,7 @@ __revision__ = "$Id$"
 import math
 
 from Crypto.Util import number
+from Crypto.Util.py3compat import *
 
 
 class error (Exception):
@@ -107,17 +108,17 @@ def decode_point(bs, T):
     """
     if not bs:
         raise error("can't decode a blank Point")
-    if bs[0] == '\x00':
+    if bord(bs[0]) == 0:
         return INFINITY
-    elif bs[0] == '\x04':  # uncompressed point
+    elif bord(bs[0]) == 4:  # uncompressed point
         if len(bs) % 2 == 0:  # should be two even strings, plus 1 byte
             raise error('wrong length for uncompressed point')
-        length = (len(bs) - 1) / 2 + 1
+        length = (len(bs) - 1) // 2 + 1
         x = number.bytes_to_long(bs[1:length])
         y = number.bytes_to_long(bs[length:])
     else:
         x = number.bytes_to_long(bs[1:])
-        y_prime = (bs[0] == '\x03')
+        y_prime = (bord(bs[0]) == 3)
         alpha = (x ** 3 + T.a * x + T.b) % T.p
         beta = number.sqrt(alpha, T.p)
         if beta % 2 == y_prime:
@@ -153,17 +154,17 @@ class Point:
 
     def encode(self, compress=True):
         if self.x is None:  # INFINITY:
-            return '\x00'
+            return bchr(0)
         x_encoded = number.long_to_bytes(self.x)
         if not compress:
             y_encoded = number.long_to_bytes(self.y)
-            return ''.join(('\x04', x_encoded, y_encoded))
+            return bchr(4) + x_encoded + y_encoded
         else:
             odd = self.y % 2
             if odd:
-                return '\x03' + x_encoded
+                return bchr(3) + x_encoded
             else:
-                return '\x02' + x_encoded
+                return bchr(2) + x_encoded
 
     def verify(self):
         """

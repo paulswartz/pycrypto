@@ -214,24 +214,24 @@ class PrimePointTestCase(unittest.TestCase):
         # Test data comes from GEC2:
         #  http://www.secg.org/download/aid-390/gec2.pdf
         from Crypto.PublicKey.ECDSA import secp160r1, secp192r1
-        x = ('\x4a\x96\xb5\x68\x8e\xf5\x73\x28\x46\x64\x69\x89\x68\xc3\x8b'
-             '\xb9\x13\xcb\xfc\x82')
-        y = ('\x23\xa6\x28\x55\x31\x68\x94\x7d\x59\xdc\xc9\x12\x04\x23\x51'
-             '\x37\x7a\xc5\xfb\x32')
+        x = b('\x4a\x96\xb5\x68\x8e\xf5\x73\x28\x46\x64\x69\x89\x68\xc3\x8b'
+              '\xb9\x13\xcb\xfc\x82')
+        y = b('\x23\xa6\x28\x55\x31\x68\x94\x7d\x59\xdc\xc9\x12\x04\x23\x51'
+              '\x37\x7a\xc5\xfb\x32')
         self.assertEqual(
             secp160r1.G.encode(compress=False),
-            '\x04' + x + y)
+            bchr(4) + x + y)
         self.assertEqual(
             secp160r1.G.encode(compress=True),
-            '\x02' + x)
+            bchr(2) + x)
 
-        x = ('\x18\x8D\xA8\x0E\xB0\x30\x90\xF6\x7C\xBF\x20\xEB\x43\xA1\x88\x00'
-             '\xF4\xFF\x0A\xFD\x82\xFF\x10\x12')
+        x = b('\x18\x8D\xA8\x0E\xB0\x30\x90\xF6\x7C\xBF\x20\xEB\x43\xA1\x88'
+              '\x00\xF4\xFF\x0A\xFD\x82\xFF\x10\x12')
         self.assertEqual(
             secp192r1.G.encode(compress=True),
-            '\x03' + x)
+            bchr(3) + x)
 
-        self.assertEqual(_ECDSA.INFINITY.encode(), '\x00')
+        self.assertEqual(_ECDSA.INFINITY.encode(), bchr(0))
 
     def test_decode(self):
         """
@@ -240,18 +240,18 @@ class PrimePointTestCase(unittest.TestCase):
         # Test data comes from GEC2:
         #  http://www.secg.org/download/aid-390/gec2.pdf
         from Crypto.PublicKey.ECDSA import secp160r1, secp192r1
-        x = ('\x4a\x96\xb5\x68\x8e\xf5\x73\x28\x46\x64\x69\x89\x68\xc3\x8b'
-             '\xb9\x13\xcb\xfc\x82')
-        y = ('\x23\xa6\x28\x55\x31\x68\x94\x7d\x59\xdc\xc9\x12\x04\x23\x51'
-             '\x37\x7a\xc5\xfb\x32')
-        self.assertEqual(_ECDSA.decode_point('\x04' + x + y, secp160r1),
+        x = b('\x4a\x96\xb5\x68\x8e\xf5\x73\x28\x46\x64\x69\x89\x68\xc3\x8b'
+              '\xb9\x13\xcb\xfc\x82')
+        y = b('\x23\xa6\x28\x55\x31\x68\x94\x7d\x59\xdc\xc9\x12\x04\x23\x51'
+              '\x37\x7a\xc5\xfb\x32')
+        self.assertEqual(_ECDSA.decode_point(bchr(4) + x + y, secp160r1),
                          secp160r1.G)
-        self.assertEqual(_ECDSA.decode_point('\x02' + x, secp160r1),
+        self.assertEqual(_ECDSA.decode_point(bchr(2) + x, secp160r1),
                          secp160r1.G)
 
-        x = ('\x18\x8D\xA8\x0E\xB0\x30\x90\xF6\x7C\xBF\x20\xEB\x43\xA1\x88\x00'
-             '\xF4\xFF\x0A\xFD\x82\xFF\x10\x12')
-        self.assertEqual(_ECDSA.decode_point('\x03' + x, secp192r1),
+        x = b('\x18\x8D\xA8\x0E\xB0\x30\x90\xF6\x7C\xBF\x20\xEB\x43\xA1\x88'
+              '\x00\xF4\xFF\x0A\xFD\x82\xFF\x10\x12')
+        self.assertEqual(_ECDSA.decode_point(bchr(3) + x, secp192r1),
                          secp192r1.G)
 
 
