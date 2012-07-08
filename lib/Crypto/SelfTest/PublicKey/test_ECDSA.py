@@ -44,17 +44,23 @@ def _sws(s):
 
 class ECDSATest(unittest.TestCase):
 
-    k = 0x12345
-    e = 0x6789A
-    r = 6186451819093483434750424257046574279557039309719577903637L
-    s = 2153819583584147175557025240043672389298338567502288622803L
+    # Test vectors come from GEC2:
+    # http://www.secg.org/download/aid-390/gec2.pdf
+    d = 971761939728640320549601132085879836204587084162
+    Q = (466448783855397898016055842232266600516272889280,
+         1110706324081757720403272427311003102474457754220)
+    k = 702232148019446860144825009548118511996283736794
+    e = 968236873715988614170569073515315707566766479517
+    r = 1176954224688105769566774212902092897866168635793
+    s = 299742580584132926933316745664091704165278518100
 
     def setUp(self):
         global ECDSA, Random, bytes_to_long, size
         from Crypto.PublicKey import ECDSA
         from Crypto import Random
 
-        self.T = ECDSA.secp192k1
+        self.T = ECDSA.secp160r1
+        self.Q = _ECDSA.Point(self.Q[0], self.Q[1], self.T)
         self.ecdsa = ECDSA
 
     def test_generate_1arg(self):
@@ -73,15 +79,12 @@ class ECDSATest(unittest.TestCase):
 
     def test_construct_1tuple(self):
         """ECECDSA (default implementation) constructed key (1-tuple)"""
-        Q = self.T.G
-        ecdsaObj = self.ecdsa.construct((Q,))
+        ecdsaObj = self.ecdsa.construct((self.Q,))
         self._test_verification(ecdsaObj)
 
     def test_construct_2tuple(self):
         """ECECDSA (default implementation) constructed key (2-tuple)"""
-        Q = self.T.G
-        d = 1
-        ecdsaObj = self.ecdsa.construct((Q, d))
+        ecdsaObj = self.ecdsa.construct((self.Q, self.d))
         self._test_signing(ecdsaObj)
         self._test_verification(ecdsaObj)
 
