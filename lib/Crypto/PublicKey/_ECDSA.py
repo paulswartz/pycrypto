@@ -70,7 +70,6 @@ class Point:
     """
     Class representing a point on an elliptic curve.
     """
-    # XXX use methods on T instead of on this when we support 2**m curves
     def __init__(self, x, y, T):
         self.x = x
         self.y = y
@@ -102,6 +101,8 @@ class Point:
         return left == right
 
     def __add__(self, other):
+        # XXX use implementation on T instead of on this when we support 2**m
+        # curves
         if not isinstance(other, Point):
             raise NotImplementedError
         if other.x is None and other.y is None:
@@ -136,14 +137,20 @@ class Point:
         if not other:
             return INFINITY
         # implement scalar multiplication based on addition using the
-        # add/double&add algorithm
+        # add/double&add algorithm.  We also use a Montgomery ladder to avoid a
+        # side-channel attack:
+        # http://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication
         bit_length = int(math.ceil(math.log(other, 2)))
-        r = INFINITY
+        r0 = INFINITY
+        r1 = self
         for i in range(bit_length, -1, -1):
-            r = r + r
             if (other & 2 ** i) == 2 ** i:
-                r = r + self
-        return r
+                r0 = r0 + r1
+                r1 = r1 + r1
+            else:
+                r1 = r0 + r1
+                r0 = r0 + r0
+        return r0
 
 
 INFINITY = Point(None, None, None)  # Infinity is on every curve
