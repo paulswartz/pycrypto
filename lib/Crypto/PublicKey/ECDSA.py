@@ -78,10 +78,10 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 1:
 from Crypto.PublicKey import _ECDSA, _slowmath, pubkey
 from Crypto import Random
 
-try:
-    from Crypto.PublicKey import _fastmath
-except ImportError:
-    _fastmath = None
+# try:
+#     from Crypto.PublicKey import _fastmath
+# except ImportError:
+#     _fastmath = None
 
 
 class _ECDSAobj(pubkey.pubkey):
@@ -250,21 +250,21 @@ class ECDSAImplementation(object):
         :Raise RuntimeError:
             When **use_fast_math** =True but fast math is not available.
         """
-        use_fast_math = kwargs.get('use_fast_math', None)
-        if use_fast_math is None:   # Automatic
-            if _fastmath is not None:
-                self._math = _fastmath
-            else:
-                self._math = _slowmath
+        # use_fast_math = kwargs.get('use_fast_math', None)
+        # if use_fast_math is None:   # Automatic
+        #     if _fastmath is not None:
+        #         self._math = _fastmath
+        #     else:
+        #         self._math = _slowmath
 
-        elif use_fast_math:     # Explicitly select fast math
-            if _fastmath is not None:
-                self._math = _fastmath
-            else:
-                raise RuntimeError("fast math module not available")
+        # elif use_fast_math:     # Explicitly select fast math
+        #     if _fastmath is not None:
+        #         self._math = _fastmath
+        #     else:
+        #         raise RuntimeError("fast math module not available")
 
-        else:   # Explicitly select slow math
-            self._math = _slowmath
+        # else:   # Explicitly select slow math
+        self._math = _slowmath
 
         self.error = self._math.error
 

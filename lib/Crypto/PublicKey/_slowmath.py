@@ -26,7 +26,7 @@
 
 __revision__ = "$Id$"
 
-__all__ = ['rsa_construct']
+__all__ = ['rsa_construct', 'dsa_construct', 'ecdsa_construct']
 
 import sys
 

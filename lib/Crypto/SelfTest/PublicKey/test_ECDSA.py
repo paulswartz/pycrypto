@@ -251,19 +251,19 @@ class PointTestCase(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(PointTestCase)
-    try:
-        from Crypto.PublicKey import _fastmath
-        tests += list_test_cases(ECDSAFastMathTest)
-    except ImportError:
-        from distutils.sysconfig import get_config_var
-        import inspect
-        _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
-            inspect.getfile(inspect.currentframe())))
-            +"/../../PublicKey/_fastmath"+get_config_var("SO"))
-        if os.path.exists(_fm_path):
-            raise ImportError("While the _fastmath module exists, importing "+
-                "it failed. This may point to the gmp or mpir shared library "+
-                "not being in the path. _fastmath was found at "+_fm_path)
+    # try:
+    #     from Crypto.PublicKey import _fastmath
+    #     tests += list_test_cases(ECDSAFastMathTest)
+    # except ImportError:
+    #     from distutils.sysconfig import get_config_var
+    #     import inspect
+    #     _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
+    #         inspect.getfile(inspect.currentframe())))
+    #         +"/../../PublicKey/_fastmath"+get_config_var("SO"))
+    #     if os.path.exists(_fm_path):
+    #         raise ImportError("While the _fastmath module exists, importing "+
+    #             "it failed. This may point to the gmp or mpir shared library "+
+    #             "not being in the path. _fastmath was found at "+_fm_path)
     tests += list_test_cases(ECDSASlowMathTest)
     return tests
 
