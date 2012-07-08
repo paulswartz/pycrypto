@@ -49,7 +49,7 @@ class ECDSATest(unittest.TestCase):
         from Crypto.PublicKey import ECDSA
         from Crypto import Random
 
-        self.ecdsa = ECDSA
+        self.ecdsa = ECDSA.ECDSAImplementation()
 
     def test_generate_1arg(self):
         """ECDSA (default implementation) generated key (1 argument)"""
@@ -143,50 +143,6 @@ class PrimeECDSATest(ECDSATest):
         self.Q = _ECDSA.Point(self.Q[0], self.Q[1], self.T)
 
 
-class PrimeECDSAFastMathTest(PrimeECDSATest):
-    def setUp(self):
-        PrimeECDSATest.setUp(self)
-        self.ecdsa = ECDSA.ECDSAImplementation(use_fast_math=True)
-
-    def test_generate_1arg(self):
-        """ECDSA (_fastmath implementation) generated key (1 argument)"""
-        ECDSATest.test_generate_1arg(self)
-
-    def test_generate_2arg(self):
-        """ECDSA (_fastmath implementation) generated key (2 arguments)"""
-        ECDSATest.test_generate_2arg(self)
-
-    def test_construct_1tuple(self):
-        """ECDSA (_fastmath implementation) constructed key (1-tuple)"""
-        ECDSATest.test_construct_1tuple(self)
-
-    def test_construct_2tuple(self):
-        """ECDSA (_fastmath implementation) constructed key (2-tuple)"""
-        ECDSATest.test_construct_2tuple(self)
-
-
-class PrimeECDSASlowMathTest(PrimeECDSATest):
-    def setUp(self):
-        PrimeECDSATest.setUp(self)
-        self.ecdsa = ECDSA.ECDSAImplementation(use_fast_math=False)
-
-    def test_generate_1arg(self):
-        """ECDSA (_slowmath implementation) generated key (1 argument)"""
-        ECDSATest.test_generate_1arg(self)
-
-    def test_generate_2arg(self):
-        """ECDSA (_slowmath implementation) generated key (2 arguments)"""
-        ECDSATest.test_generate_2arg(self)
-
-    def test_construct_1tuple(self):
-        """ECDSA (_slowmath implementation) constructed key (2-tuple)"""
-        ECDSATest.test_construct_1tuple(self)
-
-    def test_construct_2tuple(self):
-        """ECDSA (_slowmath implementation) constructed key (2-tuple)"""
-        ECDSATest.test_construct_2tuple(self)
-
-
 class PrimePointTestCase(unittest.TestCase):
     def setUp(self):
         global _ECDSA
@@ -260,20 +216,7 @@ class PrimePointTestCase(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(PrimePointTestCase)
-    # try:
-    #     from Crypto.PublicKey import _fastmath
-    #     tests += list_test_cases(ECDSAFastMathTest)
-    # except ImportError:
-    #     from distutils.sysconfig import get_config_var
-    #     import inspect
-    #     _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
-    #         inspect.getfile(inspect.currentframe())))
-    #         +"/../../PublicKey/_fastmath"+get_config_var("SO"))
-    #     if os.path.exists(_fm_path):
-    #         raise ImportError("While the _fastmath module exists, importing "+
-    #             "it failed. This may point to the gmp or mpir shared library "+
-    #             "not being in the path. _fastmath was found at "+_fm_path)
-    tests += list_test_cases(PrimeECDSASlowMathTest)
+    tests += list_test_cases(PrimeECDSATest)
     return tests
 
 if __name__ == '__main__':

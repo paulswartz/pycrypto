@@ -82,7 +82,7 @@ import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 
-from Crypto.PublicKey import _ECDSA, _slowmath, pubkey
+from Crypto.PublicKey import _ECDSA,  pubkey
 from Crypto import Random
 
 # try:
@@ -257,24 +257,6 @@ class ECDSAImplementation(object):
         :Raise RuntimeError:
             When **use_fast_math** =True but fast math is not available.
         """
-        # use_fast_math = kwargs.get('use_fast_math', None)
-        # if use_fast_math is None:   # Automatic
-        #     if _fastmath is not None:
-        #         self._math = _fastmath
-        #     else:
-        #         self._math = _slowmath
-
-        # elif use_fast_math:     # Explicitly select fast math
-        #     if _fastmath is not None:
-        #         self._math = _fastmath
-        #     else:
-        #         raise RuntimeError("fast math module not available")
-
-        # else:   # Explicitly select slow math
-        self._math = _slowmath
-
-        self.error = self._math.error
-
         # 'default_randfunc' parameter:
         #   None (default) - use Random.new().read
         #   not None       - use the specified function
@@ -323,7 +305,7 @@ class ECDSAImplementation(object):
     def _generate(self, T, randfunc=None, progress_func=None):
         rf = self._get_randfunc(randfunc)
         obj = _ECDSA.generate_py(T, rf, progress_func)
-        key = self._math.ecdsa_construct(obj.Q, obj.d)
+        key = _ECDSA.construct(obj.Q, obj.d)
         return _ECDSAobj(self, key)
 
     def construct(self, tup):
@@ -341,13 +323,17 @@ class ECDSAImplementation(object):
 
         :Return: A ECDSA key object (`_ECDSAobj`).
         """
-        key = self._math.ecdsa_construct(*tup)
+        key = _ECDSA.construct(*tup)
         return _ECDSAobj(self, key)
 
 _impl = ECDSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
-error = _impl.error
+
+
+class error(Exception):
+    pass
+
 
 # This curve is only used for testing.
 secp160r1 = _ECDSA.PrimeCurveDomain(

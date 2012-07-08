@@ -36,6 +36,38 @@ class error (Exception):
     pass
 
 
+class _ECDSAKey(object):
+    def size(self):
+        """Return the maximum number of bits that can be encrypted"""
+        return number.size(self.Q.T.p) - 1
+
+    def has_private(self):
+        return hasattr(self, 'd')
+
+    def _sign(self, e, k):   # alias for _decrypt
+        R = self.Q.T.G * k
+        if R.x == 0:
+            raise ValueError('invalid k value')
+        s_num = (e + self.d * R.x) % self.Q.T.n
+        s = (s_num * number.inverse(k, self.Q.T.n)) % self.Q.T.n
+        if s == 0:
+            raise ValueError('invalid k value')
+        return (R.x, s)
+
+    def _verify(self, e, r, s):
+        if r < 0 or r > self.Q.T.n:
+            return 0
+        if s < 0 or s > self.Q.T.n:
+            return 0
+        w = number.inverse(s, self.Q.T.n)
+        u1 = (e * w) % self.Q.T.n
+        u2 = (r * w) % self.Q.T.n
+        P1 = self.Q.T.G * u1
+        P2 = self.Q * u2
+        P = P1 + P2
+        return P.x == r
+
+
 def generate_py(T, randfunc, progress_func=None):
     """generate(curve:CurveDomain, randfunc:callable, progress_func:callable)
 
@@ -45,25 +77,28 @@ def generate_py(T, randfunc, progress_func=None):
     """
     if not T.verify():
         raise ValueError('Invalid curve')
-    obj = ECDSAobj()
-    obj.T = T
+
     # Generate private key d and public key Q = dg
     if progress_func:
         progress_func('d\n')
-    obj.d = number.getRandomRange(1, T.n - 1, randfunc)
+    d = number.getRandomRange(1, T.n - 1, randfunc)
     if progress_func:
         progress_func('Q\n')
-    obj.Q = T.G * obj.d
-    assert T.G.verify()
-    assert obj.Q.verify()
-    #print hex(obj.d)
-    #print hex(obj.Q.x)
-    #print hex(obj.Q.y)
+    Q = T.G * d
+    return construct(Q, d)
+
+
+def construct(Q, d=None):
+    assert isinstance(Q, Point)
+    assert Q.verify()
+    obj = _ECDSAKey()
+    obj.Q = Q
+
+    if d:
+        obj.d = d
+        assert Q.T.G * d == Q
+
     return obj
-
-
-class ECDSAobj:
-    pass
 
 
 class Point:
@@ -228,8 +263,7 @@ class PrimeCurveDomain(CurveDomain):
             27 * pow(
                 self.b, 2, self.p)) % self.p == 0:
             return False
-        if pow(self.G.y, 2, self.p) != (pow(self.G.x, 3, self.p) +
-                                        self.a * self.G.x + self.b) % self.p:
+        if not self.G.verify():
             return False
 
         # verify N is prime
